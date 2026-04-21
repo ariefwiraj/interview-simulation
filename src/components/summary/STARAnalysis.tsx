@@ -1,14 +1,32 @@
 "use client"
 import { motion } from "motion/react"
-import { CheckCircle2, AlertTriangle } from "lucide-react"
+import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react"
+import type { STARAnalysisData } from "@/lib/supabase/types"
 
-export function STARAnalysis() {
+interface STARAnalysisProps {
+  data: STARAnalysisData
+}
+
+export function STARAnalysis({ data }: STARAnalysisProps) {
   const pillars = [
-    { name: "Situation", status: "good", feedback: "Konteks masalah dijelaskan dengan cukup jelas, memberikan gambaran yang tepat tentang peran dan tanggung jawab Anda." },
-    { name: "Task", status: "good", feedback: "Tugas dan tujuan berhasil diutarakan secara spesifik. Anda tahu persis apa yang seharusnya dicapai dalam project." },
-    { name: "Action", status: "warning", feedback: "Langkah-langkah yang diambil sudah disebutkan, tapi perlu lebih difokuskan pada peran 'saya', bukan 'kami'." },
-    { name: "Result", status: "warning", feedback: "Hasil akhirnya disebutkan, namun belum terukur. Sangat direkomendasikan menggunakan angka atau metrik." },
+    { name: "Situation", ...data.situation },
+    { name: "Task", ...data.task },
+    { name: "Action", ...data.action },
+    { name: "Result", ...data.result },
   ]
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "good":
+        return <CheckCircle2 size={20} className="text-accent" />
+      case "warning":
+        return <AlertTriangle size={20} className="text-warning" />
+      case "poor":
+        return <XCircle size={20} className="text-danger" />
+      default:
+        return <AlertTriangle size={20} className="text-warning" />
+    }
+  }
 
   return (
     <div className="grid md:grid-cols-2 gap-4">
@@ -22,11 +40,7 @@ export function STARAnalysis() {
         >
           <div className="flex justify-between items-center pb-2 border-b border-border/50">
             <span className="font-bold">{pillar.name}</span>
-            {pillar.status === "good" ? (
-              <CheckCircle2 size={20} className="text-accent" />
-            ) : (
-              <AlertTriangle size={20} className="text-warning" />
-            )}
+            {getStatusIcon(pillar.status)}
           </div>
           <p className="text-sm text-text-muted leading-relaxed">{pillar.feedback}</p>
         </motion.div>

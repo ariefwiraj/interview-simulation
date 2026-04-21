@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "motion/react"
 import { StepIndicator } from "@/components/ui/StepIndicator"
 import { RoleSelector } from "@/components/setup/RoleSelector"
+import { SenioritySelector } from "@/components/setup/SenioritySelector"
 import { TypeSelector } from "@/components/setup/TypeSelector"
 import { DurationPicker } from "@/components/setup/DurationPicker"
 import { Button } from "@/components/ui/Button"
@@ -15,12 +16,14 @@ export default function SetupPage() {
   const router = useRouter()
   const [step, setStep] = React.useState(1)
   const [role, setRole] = React.useState<string>()
+  const [seniority, setSeniority] = React.useState<string>()
   const [type, setType] = React.useState<string>()
   const [duration, setDuration] = React.useState<number>()
   const [isLoading, setIsLoading] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
   const handleNext = () => {
-    if (step < 4) setStep(step + 1)
+    if (step < 5) setStep(step + 1)
   }
 
   const handleBack = () => {
@@ -29,17 +32,38 @@ export default function SetupPage() {
 
   const handleStart = async () => {
     setIsLoading(true)
-    setTimeout(() => {
-      const sessionId = Math.random().toString(36).substring(7)
-      localStorage.setItem("interview_setup", JSON.stringify({ role, type, duration, sessionId }))
-      router.push(`/interview/${sessionId}`)
-    }, 1500)
+    setError(null)
+
+    try {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role,
+          seniority,
+          interviewer_type: type,
+          duration,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to create session")
+      }
+
+      const { session } = await res.json()
+      router.push(`/interview/${session.id}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+      setIsLoading(false)
+    }
   }
 
   const canProceed = () => {
     if (step === 1 && !role) return false
-    if (step === 2 && !type) return false
-    if (step === 3 && !duration) return false
+    if (step === 2 && !seniority) return false
+    if (step === 3 && !type) return false
+    if (step === 4 && !duration) return false
     return true
   }
 
@@ -64,7 +88,7 @@ export default function SetupPage() {
           </div>
         </div>
         
-        <StepIndicator currentStep={step} totalSteps={4} />
+        <StepIndicator currentStep={step} totalSteps={5} />
 
         <div className="flex-1 relative flex flex-col min-h-[350px]">
           <AnimatePresence mode="wait">
@@ -84,17 +108,23 @@ export default function SetupPage() {
               )}
               {step === 2 && (
                 <div className="space-y-6">
+                  <h2 className="text-2xl font-semibold text-center mb-8">Pilih Pengalaman</h2>
+                  <SenioritySelector selected={seniority} onSelect={setSeniority} />
+                </div>
+              )}
+              {step === 3 && (
+                <div className="space-y-6">
                   <h2 className="text-2xl font-semibold text-center mb-8">Pilih Tipe Interview</h2>
                   <TypeSelector selected={type} onSelect={setType} />
                 </div>
               )}
-              {step === 3 && (
+              {step === 4 && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-semibold text-center mb-8">Pilih Durasi Waktu</h2>
                   <DurationPicker selected={duration} onSelect={setDuration} />
                 </div>
               )}
-              {step === 4 && (
+              {step === 5 && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-semibold text-center mb-8">Review Konfigurasi</h2>
                   <Card className="max-w-md mx-auto border-primary bg-primary/5">
@@ -102,6 +132,10 @@ export default function SetupPage() {
                       <div className="flex justify-between items-center pb-4 border-b border-border">
                         <span className="text-text-muted">Job Role</span>
                         <span className="font-semibold capitalize">{role?.replace('-', ' ')}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-4 border-b border-border">
+                        <span className="text-text-muted">Experience</span>
+                        <span className="font-semibold capitalize">{seniority === 'fresh' ? 'Fresh Graduate' : seniority === 'mid' ? '1-3 Years' : '> 3 Years'}</span>
                       </div>
                       <div className="flex justify-between items-center pb-4 border-b border-border">
                         <span className="text-text-muted">Interview Type</span>
@@ -117,6 +151,16 @@ export default function SetupPage() {
                       </div>
                     </div>
                   </Card>
+
+                  {error && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center text-sm text-danger"
+                    >
+                      {error}
+                    </motion.p>
+                  )}
                 </div>
               )}
             </motion.div>
@@ -133,7 +177,7 @@ export default function SetupPage() {
             <div />
           )}
 
-          {step < 4 ? (
+          {step < 5 ? (
             <Button onClick={handleNext} disabled={!canProceed()}>
               Next Step <ArrowRight className="ml-2 w-4 h-4" />
             </Button>

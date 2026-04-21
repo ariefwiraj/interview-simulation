@@ -3,7 +3,7 @@ import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function DurationPicker({ selected, onSelect }: { selected?: number, onSelect: (min: number) => void }) {
-  const options = [15, 20, 30]
+  const options = [10, 15, 20, 30]
 
   return (
     <div className="flex flex-col items-center gap-6 mt-8">
