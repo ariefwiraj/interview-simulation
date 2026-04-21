@@ -1,3 +1,5 @@
+import type { InterviewStage } from "@/lib/interviewStages";
+
 // ─── Database Row Types ────────────────────────────────────────────
 
 export type InterviewerType = "hr" | "technical";
@@ -47,6 +49,8 @@ export interface Summary {
   suggestions: string[];
   star_analysis: STARAnalysisData | null;
   score: number | null;
+  time_management_score: number | null;
+  communication_score: number | null;
   created_at: string;
 }
 
@@ -61,7 +65,7 @@ export interface CreateSessionRequest {
 
 export interface SendMessageRequest {
   message: string;
-  is_last_5_minutes: boolean;
+  current_stage: InterviewStage;
 }
 
 // ─── Response DTOs ─────────────────────────────────────────────────
@@ -85,4 +89,6 @@ export interface AIGeneratedSummary {
   suggestions: string[];
   star_analysis: STARAnalysisData | null;
   score: number;
+  time_management_score: number;
+  communication_score: number;
 }

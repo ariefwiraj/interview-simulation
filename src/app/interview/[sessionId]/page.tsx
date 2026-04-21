@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/Button"
 import { Badge } from "@/components/ui/Badge"
 import { MessageBubble } from "@/components/interview/MessageBubble"
 import { TypingIndicator } from "@/components/interview/TypingIndicator"
+import { HintBox } from "@/components/interview/HintBox"
+import { StageProgressBar } from "@/components/interview/StageProgressBar"
 import { useTimer } from "@/hooks/useTimer"
+import { useInterviewStage } from "@/hooks/useInterviewStage"
 import { motion, AnimatePresence } from "motion/react"
 import type { Session, Message } from "@/lib/supabase/types"
 
@@ -53,8 +56,8 @@ export default function InterviewSession() {
     loadSession()
   }, [sessionId])
 
-  const handleEnd = React.useCallback(async () => {
-    if (isEnding) return
+  const handleEnd = React.useCallback(async (force = false) => {
+    if (isEnding && !force) return
     setIsEnding(true)
 
     try {
@@ -71,9 +74,17 @@ export default function InterviewSession() {
     router.push(`/summary/${sessionId}`)
   }, [sessionId, router, isEnding])
 
-  const { formattedTime, isLastFiveMinutes, isLastMinute } = useTimer(
+  const { secondsLeft, formattedTime, isLastFiveMinutes, isLastMinute } = useTimer(
     session?.duration || 15,
     handleEnd
+  )
+
+  const userMessageCount = messages.filter(m => m.sender === "user").length;
+  
+  const { currentStage, stageConfig, stages, completedStages } = useInterviewStage(
+    session?.duration || 15,
+    userMessageCount,
+    secondsLeft
   )
 
   React.useEffect(() => {
@@ -84,7 +95,7 @@ export default function InterviewSession() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isTyping) return
+    if (!input.trim() || isTyping || isEnding) return
 
     const userText = input.trim()
     setInput("")
@@ -106,7 +117,7 @@ export default function InterviewSession() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userText,
-          is_last_5_minutes: isLastFiveMinutes,
+          current_stage: currentStage,
         }),
       })
 
@@ -116,12 +127,27 @@ export default function InterviewSession() {
 
       const { userMessage, aiMessage } = await res.json()
 
+      // Detect AI Finish Signal
+      const hasFinishTag = aiMessage.message.includes("[FINISH]");
+      const cleanAiMessage = {
+        ...aiMessage,
+        message: aiMessage.message.replace("[FINISH]", "").trim()
+      };
+
       // Replace optimistic message with real ones
       setMessages((prev) => [
         ...prev.filter((m) => m.id !== optimisticUserMsg.id),
         userMessage,
-        aiMessage,
+        cleanAiMessage,
       ])
+
+      if (hasFinishTag) {
+        setIsEnding(true);
+        // Delay to allow user to read the final message before redirect
+        setTimeout(() => {
+          handleEnd(true);
+        }, 4000);
+      }
     } catch {
       // Remove optimistic message on error
       setMessages((prev) =>
@@ -168,16 +194,26 @@ export default function InterviewSession() {
           <span className="text-xs text-text-muted mt-1">Interviewer: AI Assistant</span>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 md:gap-6">
+          {stageConfig && <HintBox stageConfig={stageConfig} currentStage={currentStage} />}
           <div className={`flex flex-col items-center px-4 py-1.5 rounded-xl border transition-colors ${isLastMinute ? 'bg-danger/10 border-danger/50 text-danger animate-pulse' : isLastFiveMinutes ? 'bg-warning/10 border-warning/50 text-warning' : 'bg-surface-elevated border-border text-text'}`}>
             <span className="text-xs font-semibold mb-0.5">Time Remaining</span>
             <span className="font-mono text-xl font-bold">{formattedTime}</span>
           </div>
-          <Button variant="danger" size="sm" onClick={handleEnd} disabled={isEnding} className="hidden md:flex">
+          <Button variant="danger" size="sm" onClick={() => handleEnd()} disabled={isEnding} className="hidden md:flex">
             {isEnding ? "Ending..." : "End Session"} <LogOut className="ml-2 w-4 h-4" />
           </Button>
         </div>
       </header>
+
+      {/* Stage Progress */}
+      {stageConfig && (
+        <StageProgressBar 
+          stages={stages} 
+          currentStage={currentStage} 
+          completedStages={completedStages} 
+        />
+      )}
 
       {/* Warning Toast */}
       <AnimatePresence>

@@ -4,11 +4,9 @@ import type {
   Message,
   AIGeneratedSummary,
 } from "@/lib/supabase/types";
-import { getHRSystemPrompt, getHRClosingPrompt } from "@/lib/prompts/hr";
-import {
-  getTechnicalSystemPrompt,
-  getTechnicalClosingPrompt,
-} from "@/lib/prompts/technical";
+import type { InterviewStage } from "@/lib/interviewStages";
+import { getHRSystemPrompt } from "@/lib/prompts/hr";
+import { getTechnicalSystemPrompt } from "@/lib/prompts/technical";
 import { getSummaryPrompt } from "@/lib/prompts/summary";
 import { getConversationHistory } from "./messageService";
 import { getInterviewerName, getTimeGreeting } from "@/lib/utils/interviewer";
@@ -21,26 +19,33 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 /**
  * Generate an AI interviewer response based on conversation history.
+ * Now accepts currentStage to build a stage-aware system prompt.
  */
 export async function generateResponse(
   session: Session,
   messages: Message[],
-  isLast5Minutes: boolean
+  currentStage: InterviewStage
 ): Promise<string> {
-  // Build system prompt based on interviewer type
+  // Build system prompt based on interviewer type and current stage
   const interviewerName = getInterviewerName(session.id);
 
   let systemPrompt: string;
   if (session.interviewer_type === "hr") {
-    systemPrompt = getHRSystemPrompt(session.role, interviewerName, session.seniority, session.duration);
-    if (isLast5Minutes) {
-      systemPrompt += "\n\n" + getHRClosingPrompt();
-    }
+    systemPrompt = getHRSystemPrompt(
+      session.role,
+      interviewerName,
+      session.seniority,
+      session.duration,
+      currentStage
+    );
   } else {
-    systemPrompt = getTechnicalSystemPrompt(session.role, interviewerName);
-    if (isLast5Minutes) {
-      systemPrompt += "\n\n" + getTechnicalClosingPrompt();
-    }
+    systemPrompt = getTechnicalSystemPrompt(
+      session.role,
+      interviewerName,
+      session.seniority,
+      session.duration,
+      currentStage
+    );
   }
 
   const model = genAI.getGenerativeModel({
@@ -119,8 +124,10 @@ export async function generateSummary(
 
   const parsed = JSON.parse(jsonMatch[0]) as AIGeneratedSummary;
 
-  // Validate and clamp score
+  // Validate and clamp scores
   parsed.score = Math.max(0, Math.min(100, Math.round(parsed.score ?? 50)));
+  parsed.time_management_score = Math.max(0, Math.min(100, Math.round(parsed.time_management_score ?? 50)));
+  parsed.communication_score = Math.max(0, Math.min(100, Math.round(parsed.communication_score ?? 50)));
 
   return parsed;
 }

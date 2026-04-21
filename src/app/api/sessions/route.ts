@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const session = await createSession(body);
 
     // Generate opening AI message
-    const aiText = await generateResponse(session, [], false);
+    const aiText = await generateResponse(session, [], "intro");
     const firstMessage = await saveMessage(session.id, "ai", aiText);
 
     return NextResponse.json(

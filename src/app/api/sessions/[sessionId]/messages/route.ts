@@ -116,11 +116,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     // 2. Get full conversation history (including the new user message)
     const allMessages = await getMessages(sessionId);
 
-    // 3. Generate AI response
+    // 3. Generate AI response with stage context
     const aiText = await generateResponse(
       session,
       allMessages,
-      body.is_last_5_minutes ?? false
+      body.current_stage ?? "main"
     );
 
     // 4. Save AI response

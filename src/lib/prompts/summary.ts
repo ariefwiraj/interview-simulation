@@ -17,9 +17,11 @@ Analyze the entire conversation and produce a structured evaluation in JSON form
 
 EVALUATION CRITERIA:
 - Quality and depth of answers
-- Communication clarity
+- Communication clarity and structure
 - Relevance to the ${role} role
 - Confidence and professionalism
+- Time management: Were answers proportional and well-paced? Did the candidate use their time effectively?
+- Communication: Was the candidate clear, structured, and articulate?
 ${interviewerType === "hr" ? "- STAR method compliance (Situation, Task, Action, Result)" : "- Technical accuracy and depth"}
 ${interviewerType === "hr" ? "- Self-awareness and growth mindset" : "- Problem-solving approach"}
 
@@ -30,6 +32,8 @@ OUTPUT FORMAT — Return ONLY valid JSON with this exact structure:
   "weaknesses": ["weakness 1", "weakness 2"],
   "suggestions": ["actionable improvement 1", "actionable improvement 2", "actionable improvement 3"],
   "score": <number 0-100>,
+  "time_management_score": <number 0-100>,
+  "communication_score": <number 0-100>,
   ${
     interviewerType === "hr"
       ? `"star_analysis": {
@@ -41,6 +45,11 @@ OUTPUT FORMAT — Return ONLY valid JSON with this exact structure:
       : `"star_analysis": null`
   }
 }
+
+SCORING GUIDE:
+- score: Overall interview performance (0-100)
+- time_management_score: How well the candidate managed time per stage — concise intro, thorough main answers, appropriate closing (0-100)
+- communication_score: Clarity, structure, vocabulary, and confidence in communication (0-100)
 
 IMPORTANT:
 - All text feedback must be in Bahasa Indonesia

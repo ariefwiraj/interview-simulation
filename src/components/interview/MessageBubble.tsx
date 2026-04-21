@@ -2,6 +2,9 @@ import { Bot, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function MessageBubble({ message, isAI }: { message: string, isAI: boolean }) {
+  // Simple regex to strip basic markdown formatting (bold, italic)
+  const plainText = message.replace(/\*\*?|__?/g, "")
+
   return (
     <div className={cn("flex gap-4 max-w-[85%]", isAI ? "self-start" : "self-end flex-row-reverse")}>
       <div className={cn(
@@ -16,7 +19,7 @@ export function MessageBubble({ message, isAI }: { message: string, isAI: boolea
           ? "bg-surface-elevated border-border rounded-tl-sm text-text" 
           : "bg-surface text-text border-primary/30 rounded-tr-sm"
       )}>
-        {message}
+        {plainText}
       </div>
     </div>
   )

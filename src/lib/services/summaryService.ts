@@ -43,6 +43,8 @@ export async function generateAndSaveSummary(
       suggestions: aiSummary.suggestions,
       star_analysis: aiSummary.star_analysis,
       score: aiSummary.score,
+      time_management_score: aiSummary.time_management_score,
+      communication_score: aiSummary.communication_score,
     })
     .select()
     .single();
